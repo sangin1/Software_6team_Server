@@ -9,7 +9,7 @@ public class loginVO implements Serializable{
 	private String id;
 	private String pw;
 	
-	public void loginVO(String login_id,String id,String pw) {
+	public loginVO(String login_id,String id,String pw) {
 		this.login_id = login_id;
 		this.id = id;
 		this.pw = pw;

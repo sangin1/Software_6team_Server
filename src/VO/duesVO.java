@@ -11,7 +11,7 @@ public class duesVO implements Serializable{
 	private String dues_date;
 	private String login_id;
 	
-	public void duesVO(String dues_id,String dues_name,String dues,String dues_date,String login_id) {
+	public duesVO(String dues_id,String dues_name,String dues,String dues_date,String login_id) {
 		this.dues_id = dues_id;
 		this.dues_name = dues_name;
 		this.dues = dues;
