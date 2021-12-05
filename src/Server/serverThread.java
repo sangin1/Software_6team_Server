@@ -24,47 +24,43 @@ public class serverThread extends Thread{
 	PrintWriter out;
 	ObjectOutputStream ob_out;
 	ObjectInputStream ob_in;
-	String input="";
-	String id,pw,date;
+	String id,pw,date,a;
 	loginVO login;
 	duesVO dues;
 	public serverThread(Socket socket) {
 		this.socket = socket; 
 	}
+	@SuppressWarnings("unlikely-arg-type")
 	public void run() {
 		try {
 			in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-			out = new PrintWriter(socket.getOutputStream(),true); 
+			out = new PrintWriter(socket.getOutputStream(),true);  
 			ob_out = new ObjectOutputStream(socket.getOutputStream()); 
 			ob_in= new ObjectInputStream(socket.getInputStream());
 			try {
-				Class.forName("com.mysql.jdbc.Driver");
+				Class.forName("com.mysql.cj.jdbc.Driver");
 			} catch (ClassNotFoundException e1) { 
 				e1.printStackTrace();
 			}
 			while(true) {
-				input = in.readLine(); 
-				if(input == null) {
+				a = in.readLine(); 				
+				if(a == null) {
 					break;
 				}
-				if(input.equals("checkIdPw")==true){
-					try {
-						login = (loginVO)ob_in.readObject();
-					} catch (ClassNotFoundException e1) {
-						e1.printStackTrace();
-					}
+				String[] input = a.split("--");
+				if(input[0].equals("checkIdPw")==true){
 					try(Connection conn = DriverManager.getConnection(
-							"jdbc:mariadb://localhost:3306/duesdb","root","1234");
+							"jdbc:mysql://localhost:3306/duesdb","root","1234");
 						Statement stmt = conn.createStatement();
 						 
 						ResultSet rs = stmt.executeQuery(String.format("select * from login where id='%s' and pw='%s'",
-								login.getId(),login.getPw()));
+								input[1],input[2]));
 					){
 						if(rs.next()){
-							out.println("1"); 
+							out.println("1-"+rs.getString("login_index")); 
 							out.flush();
 						}else {
-							out.println("0-"+rs.getString("id_index")); 
+							out.println("0"); 
 							out.flush();
 						}
 
@@ -72,14 +68,13 @@ public class serverThread extends Thread{
 						e.printStackTrace();
 					}	
 					continue;
-				}else if(input.equals("checkId")==true) {
-					id = in.readLine();
+				}else if(input[0].equals("checkId")==true) {
 					try(Connection conn = DriverManager.getConnection(
-							"jdbc:mariadb://localhost:330/duesdb","root","1234");
+							"jdbc:mysql://localhost:3306/duesdb","root","1234");
 						Statement stmt = conn.createStatement();
 						 
 						ResultSet rs = stmt.executeQuery(String.format("select * from login where id='%s'",
-								id));
+								input[1]));
 					){
 						if(rs.next()){
 							out.println("0"); 
@@ -94,41 +89,33 @@ public class serverThread extends Thread{
 					}	
 					continue;
 					
-				}else if(input.equals("createUser")==true) {
-					try {
-					login = (loginVO)ob_in.readObject();
-					} catch (ClassNotFoundException e) { 
-						e.printStackTrace();
-					} catch (IOException e) { 
-						e.printStackTrace();
-					}
+				}else if(input[0].equals("createUser")==true) { 
 					try(Connection conn = DriverManager.getConnection(
-							"jdbc:mariadb://localhost:3306/duesdb","root","1234");
+							"jdbc:mysql://localhost:3306/duesdb","root","1234");
 						Statement stmt = conn.createStatement();
+							
+						//PreparedStatement pstmt = conn.prepareStatement();
 					){ 		
 						stmt.executeUpdate(String.format("insert into login(id, pw) value ('%s', '%s')",
-								login.getId(),login.getPw()));
+								input[1],input[2]));
+						System.out.println(String.format("insert into login(id, pw) value ('%s', '%s')",
+								input[1],input[2]));
+						//pstmt.executeUpdate();
 					}catch(Exception e){
 						e.printStackTrace();
 					}
 					continue;
-				}else if(input.equals("duesSearch")==true) {
-					date = in.readLine();
-					String[] dateList = date.split("-");
+				}else if(input[0].equals("duesSearch")==true) {
+					String[] dateList = input[2].split("-");
 					List<duesVO> duesList = new ArrayList<duesVO>();
 					
-					try {
-						login = (loginVO)ob_in.readObject();
-					} catch (ClassNotFoundException e) { 
-						e.printStackTrace();
-					}
 					try(Connection conn = DriverManager.getConnection(
-							"jdbc:mariadb://localhost:3306/duesdb","root","1234");
+							"jdbc:mysql://localhost:3306/duesdb","root","1234");
 						Statement stmt = conn.createStatement();
 						 
 						ResultSet rs = stmt.executeQuery(String.format("select * from dues where id_index= %s and "
 								+ "dues_date <= STR_TO_DATE('%s-%s-31', '%%Y-%%m-%%d') and dues_date >= STR_TO_DATE('%s-%s-01', '%%Y-%%m-%%d')",
-								login.getLogin_id(),dateList[0],dateList[1],dateList[0],dateList[1]));
+								input[1],dateList[0],dateList[1],dateList[0],dateList[1]));
 					){
 						while(rs.next()){
 							dues = new duesVO(rs.getString("dues_index"),rs.getString("dues_name"),
@@ -140,26 +127,18 @@ public class serverThread extends Thread{
 						e.printStackTrace();
 					}	
 					continue;
-				}else if(input.equals("duesAdd")==true) {
-					id = in.readLine();
-					try {
-						dues = (duesVO)ob_in.readObject();
-						} catch (ClassNotFoundException e) { 
-							e.printStackTrace();
-						} catch (IOException e) { 
-							e.printStackTrace();
-						}
+				}else if(input[0].equals("duesAdd")==true) {  
 						try(Connection conn = DriverManager.getConnection(
-								"jdbc:mariadb://localhost:3306/duesdb","root","1234");
+								"jdbc:mysql://localhost:3306/duesdb","root","1234");
 							Statement stmt = conn.createStatement();
 						){ 		
 							stmt.executeUpdate(String.format("insert into dues(dues_name, dues,dues_date,login_index) value ('%s', %s,'%s',%s)",
-									dues.getDues_name(),dues.getDues(),dues.getDues_date(),id));
+									input[2],input[3],input[4],input[1]));
 						}catch(Exception e){
 							e.printStackTrace();
 						}
 						continue;
-				}else if(input.equals("duesDel")==true) {
+				}else if(input[0].equals("duesDel")==true) {
 					try {
 						dues = (duesVO)ob_in.readObject();
 						} catch (ClassNotFoundException e) { 
@@ -168,28 +147,22 @@ public class serverThread extends Thread{
 							e.printStackTrace();
 						}
 						try(Connection conn = DriverManager.getConnection(
-								"jdbc:mariadb://localhost:3306/duesdb","root","1234");
+								"jdbc:mysql://localhost:3306/duesdb","root","1234");
 							Statement stmt = conn.createStatement();
 						){ 		
 							stmt.execute(String.format("delete from dues where dues_index = %s",
-									dues.getDues_id()));
+									input[1]));
 						}catch(Exception e){
 							e.printStackTrace();
 						}
 						continue;
-				}else if(input.equals("duesUpdate")==true) {
-					try {
-						dues = (duesVO)ob_in.readObject();
-						} catch (ClassNotFoundException e) { 
-							e.printStackTrace();
-						} catch (IOException e) { 
-							e.printStackTrace();
-						}
+				}else if(input[0].equals("duesUpdate")==true) {
+					
 						try(Connection conn = DriverManager.getConnection(
-								"jdbc:mariadb://localhost:3306/duesdb","root","1234");
+								"jdbc:mysql://localhost:3306/duesdb","root","1234");
 							Statement stmt = conn.createStatement();
 							PreparedStatement pstmt = conn.prepareStatement(String.format("update dues set dues_name = '%s', dues = %s, dues_date = '%s' where dues_index = %s",
-										dues.getDues_name(),dues.getDues(),dues.getDues_date(),dues.getDues_id()));
+										input[2],input[3],input[4],input[1]));
 						){ 		
 							pstmt.executeUpdate(); 
 						}catch(Exception e){
